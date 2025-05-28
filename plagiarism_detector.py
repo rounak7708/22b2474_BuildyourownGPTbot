@@ -1,8 +1,5 @@
-
-# === Install required packages ===
 !pip install -q nltk gensim scikit-learn
 
-# === Imports ===
 import nltk
 from nltk.tokenize import TreebankWordTokenizer
 from gensim.models import Word2Vec
@@ -12,7 +9,6 @@ import numpy as np
 # === Set up tokenizer (avoids punkt_tab issue) ===
 tokenizer = TreebankWordTokenizer()
 
-# === Preprocessing Function ===
 def preprocess(text):
     return tokenizer.tokenize(text.lower())
 
@@ -22,13 +18,11 @@ def train_model(sentences):
     model = Word2Vec(sentences=tokenized, vector_size=100, window=5, min_count=1)
     return model
 
-# === Sentence Vector ===
 def sentence_vector(sentence, model):
     words = preprocess(sentence)
     vecs = [model.wv[w] for w in words if w in model.wv]
     return np.mean(vecs, axis=0).reshape(1, -1) if vecs else np.zeros((1, 100))
 
-# === Similarity Function ===
 def similarity_score(sent1, sent2, model):
     vec1 = sentence_vector(sent1, model)
     vec2 = sentence_vector(sent2, model)
