@@ -35,7 +35,7 @@ class IMDBDataset(Dataset):
         return self.input_ids[idx], self.attn_mask[idx], self.labels[idx]
 
 # ✅ Small subset for quick demo
-train_data = load_dataset("imdb", split="train[:1%]")  # ~250 samples
+train_data = load_dataset("imdb", split="train[:10%]")  # ~250 samples
 train_ds = IMDBDataset(train_data["text"], train_data["label"])
 train_dl = DataLoader(train_ds, batch_size=8, shuffle=True)
 
@@ -69,3 +69,37 @@ for epoch in range(3):
         optimizer.step()
         total_loss += loss.item()
     print(f"✅ Epoch {epoch+1} Loss: {total_loss/len(train_dl):.4f}")
+
+def predict(text):
+    model.eval()
+    tok = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512).to(device)
+    with torch.no_grad():
+        out = model(tok['input_ids'], tok['attention_mask'])
+        probs = torch.softmax(out, dim=1)
+        label = torch.argmax(probs, dim=1).item()
+        return "Positive" if label == 1 else "Negative"
+
+print("👉", predict("I loved the movie!"))      # ✅ Expected: Positive
+print("👉", predict("It was horrible."))        # ✅ Expected: Negative
+
+
+def evaluate():
+    test_data = load_dataset("imdb", split="test[:10%]")  # Smaller subset
+    test_ds = IMDBDataset(test_data["text"], test_data["label"])
+    test_dl = DataLoader(test_ds, batch_size=16)
+
+    model.eval()
+    all_preds, all_labels = [], []
+
+    with torch.no_grad():
+        for x, m, y in test_dl:
+            x, m, y = x.to(device), m.to(device), y.to(device)
+            out = model(x, m)
+            preds = torch.argmax(out, dim=1)
+            all_preds.extend(preds.cpu().tolist())
+            all_labels.extend(y.cpu().tolist())
+
+    acc = accuracy_score(all_labels, all_preds)
+    print(f"✅ Test Accuracy: {acc:.4f}")
+
+evaluate()
